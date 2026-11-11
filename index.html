@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DLSU Laguna | SHWR Verification</title>
+
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #f3f5f7;
+      color: #222;
+    }
+
+    .container {
+      max-width: 650px;
+      margin: auto;
+      background: white;
+      padding: 24px;
+      border-radius: 12px;
+      box-shadow: 0 3px 15px rgba(0,0,0,.10);
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .header h2 {
+      color: #006b3f;
+      margin-bottom: 5px;
+    }
+
+    .header p {
+      margin: 4px 0;
+      color: #555;
+    }
+
+    .announcement {
+      background: #fff8e5;
+      border-left: 5px solid #e0a800;
+      padding: 14px;
+      margin: 20px 0;
+      border-radius: 5px;
+      line-height: 1.5;
+      font-size: 14px;
+    }
+
+    .section-title {
+      font-weight: bold;
+      margin: 20px 0 10px;
+    }
+
+    #reader {
+      width: 100%;
+      overflow: hidden;
+      border-radius: 8px;
+    }
+
+    .button {
+      width: 100%;
+      padding: 13px;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+
+    .primary {
+      background: #006b3f;
+      color: white;
+    }
+
+    .secondary {
+      background: #e9ecef;
+      color: #222;
+    }
+
+    input {
+      width: 100%;
+      padding: 14px;
+      font-size: 18px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      margin-top: 8px;
+    }
+
+    .result {
+      display: none;
+      margin-top: 22px;
+      padding: 20px;
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    .result h2 {
+      font-size: 25px;
+      margin: 0 0 12px;
+    }
+
+    .with {
+      background: #e6f5eb;
+      border: 2px solid #198754;
+      color: #146c43;
+    }
+
+    .without {
+      background: #fdeaea;
+      border: 2px solid #dc3545;
+      color: #b02a37;
+    }
+
+    .error {
+      background: #fff3cd;
+      border: 2px solid #ffc107;
+      color: #856404;
+    }
+
+    .student-info {
+      margin-top: 12px;
+      line-height: 1.7;
+      color: #222;
+      text-align: left;
+    }
+
+    .small {
+      font-size: 12px;
+      color: #666;
+      margin-top: 20px;
+      text-align: center;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    a {
+      color: #006b3f;
+      font-weight: bold;
+    }
+
+    button:disabled {
+      opacity: .6;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <div class="header">
+    <h2>DE LA SALLE UNIVERSITY</h2>
+    <p>Laguna Campus</p>
+    <h3>HEALTH SERVICES UNIT</h3>
+    <h3>STUDENT HEALTH AND WELLNESS RECORD</h3>
+    <p>SHWR Verification System | AY 2026–2027</p>
+  </div>
+
+  <div class="announcement">
+    <strong>ANNOUNCEMENT</strong>
+    <p>
+      All OLD and NEW students for Academic Year 2026–2027
+      are REQUIRED to accomplish and submit the Student Health
+      and Wellness Record (SHWR).
+    </p>
+    <p>
+      Please ensure that your Student Number is correctly entered
+      in the SHWR submission form.
+    </p>
+    <p>
+      <a href="https://forms.gle/ZyPLozq3AqGmJkCR6"
+         target="_blank" rel="noopener">
+        CLICK HERE TO SUBMIT SHWR
+      </a>
+    </p>
+  </div>
+
+  <div class="section-title">1. BARCODE / QR CODE SCANNER</div>
+
+  <div id="reader"></div>
+
+  <button id="startButton"
+          class="button primary"
+          onclick="startScanner()">
+    START CAMERA SCANNER
+  </button>
+
+  <button id="stopButton"
+          class="button secondary"
+          onclick="stopScanner()"
+          disabled>
+    STOP SCANNER
+  </button>
+
+  <div class="section-title">
+    2. MANUAL STUDENT NUMBER ENTRY
+  </div>
+
+  <input
+    type="text"
+    id="studentNumber"
+    placeholder="Enter Student Number"
+    autocomplete="off"
+  >
+
+  <button class="button primary"
+          id="verifyButton"
+          onclick="verifyManual()">
+    VERIFY STUDENT NUMBER
+  </button>
+
+  <div id="result" class="result">
+    <h2 id="statusText"></h2>
+    <div id="studentInfo" class="student-info"></div>
+
+    <button class="button primary"
+            onclick="scanNext()">
+      SCAN NEXT STUDENT
+    </button>
+  </div>
+
+  <div class="small">
+    DLSU Laguna Campus | Health Services Unit<br>
+    Student Health and Wellness Record Verification
+  </div>
+
+</div>
+
+
+<script>
+
+/************************************************************
+ * CONFIGURATION
+ ************************************************************/
+
+const API_URL =
+"https://script.google.com/a/macros/dlsu.edu.ph/s/AKfycbyEm6zVv9zbKhoPhwDLCszU8CE_Aedv0RkJal5SSonTILV7fodKGFlHPrvon7bhdC_X/exec";
+
+let html5QrCode = null;
+let scannerRunning = false;
+let verificationInProgress = false;
+
+
+/************************************************************
+ * START CAMERA SCANNER
+ ************************************************************/
+
+async function startScanner() {
+
+  if (!window.isSecureContext) {
+    showResult(
+      "ERROR",
+      "Camera access requires a secure HTTPS connection.",
+      "error"
+    );
+    return;
+  }
+
+  if (typeof Html5Qrcode === "undefined") {
+    showResult(
+      "ERROR",
+      "Scanner library could not be loaded. Check your internet connection.",
+      "error"
+    );
+    return;
+  }
+
+  try {
+
+    if (!html5QrCode) {
+
+      const formats = [
+        Html5QrcodeSupportedFormats.QR_CODE,
+        Html5QrcodeSupportedFormats.CODE_128,
+        Html5QrcodeSupportedFormats.CODE_39,
+        Html5QrcodeSupportedFormats.CODE_93,
+        Html5QrcodeSupportedFormats.EAN_13,
+        Html5QrcodeSupportedFormats.EAN_8,
+        Html5QrcodeSupportedFormats.UPC_A,
+        Html5QrcodeSupportedFormats.UPC_E,
+        Html5QrcodeSupportedFormats.ITF
+      ];
+
+      html5QrCode = new Html5Qrcode(
+        "reader",
+        {
+          formatsToSupport: formats,
+          verbose: false
+        }
+      );
+
+    }
+
+    const config = {
+      fps: 10,
+      qrbox: {
+        width: 250,
+        height: 150
+      },
+      aspectRatio: 1.0
+    };
+
+    try {
+
+      await html5QrCode.start(
+        { facingMode: "environment" },
+        config,
+        onScanSuccess,
+        onScanFailure
+      );
+
+    } catch (firstError) {
+
+      const cameras = await Html5Qrcode.getCameras();
+
+      if (!cameras || cameras.length === 0) {
+        throw new Error(
+          "No camera was detected. Check your device camera."
+        );
+      }
+
+      const selectedCamera = cameras[cameras.length - 1];
+
+      await html5QrCode.start(
+        selectedCamera.id,
+        config,
+        onScanSuccess,
+        onScanFailure
+      );
+
+    }
+
+    scannerRunning = true;
+
+    document.getElementById("startButton").disabled = true;
+    document.getElementById("stopButton").disabled = false;
+
+  } catch (error) {
+
+    let message = error.message || String(error);
+
+    if (error.name === "NotAllowedError") {
+      message = "Camera permission denied. Allow camera access in your browser settings.";
+    } else if (error.name === "NotFoundError") {
+      message = "No camera was found on this device.";
+    } else if (error.name === "NotReadableError") {
+      message = "Camera is being used by another application.";
+    }
+
+    showResult(
+      "CAMERA ERROR",
+      message,
+      "error"
+    );
+
+    scannerRunning = false;
+
+    document.getElementById("startButton").disabled = false;
+    document.getElementById("stopButton").disabled = true;
+
+  }
+
+}
+
+
+/************************************************************
+ * STOP CAMERA SCANNER
+ ************************************************************/
+
+async function stopScanner() {
+
+  if (!html5QrCode || !scannerRunning) {
+    return;
+  }
+
+  try {
+
+    await html5QrCode.stop();
+    scannerRunning = false;
+
+  } catch (error) {
+    console.error(error);
+  }
+
+  document.getElementById("startButton").disabled = false;
+  document.getElementById("stopButton").disabled = true;
+
+}
+
+
+/************************************************************
+ * BARCODE / QR SCAN SUCCESS
+ ************************************************************/
+
+function onScanSuccess(decodedText) {
+
+  if (verificationInProgress) {
+    return;
+  }
+
+  const studentNumber = String(decodedText || "").trim();
+
+  if (!studentNumber) {
+    return;
+  }
+
+  document.getElementById("studentNumber").value =
+    studentNumber;
+
+  verifyStudent(studentNumber);
+
+}
+
+
+function onScanFailure(error) {
+  // Normal scanner behavior while searching for a code.
+}
+
+
+/************************************************************
+ * MANUAL VERIFICATION
+ ************************************************************/
+
+function verifyManual() {
+
+  const studentNumber =
+    document.getElementById("studentNumber").value.trim();
+
+  if (!studentNumber) {
+
+    showResult(
+      "ERROR",
+      "Please enter a Student Number.",
+      "error"
+    );
+
+    return;
+  }
+
+  verifyStudent(studentNumber);
+
+}
+
+
+/************************************************************
+ * VERIFY STUDENT AGAINST GOOGLE SHEETS
+ ************************************************************/
+
+function verifyStudent(studentNumber) {
+
+  if (verificationInProgress) {
+    return;
+  }
+
+  verificationInProgress = true;
+
+  document.getElementById("verifyButton").disabled = true;
+
+  showLoading();
+
+  const callbackName =
+    "shwrCallback_" +
+    Date.now() +
+    "_" +
+    Math.floor(Math.random() * 100000);
+
+  const script = document.createElement("script");
+
+  let completed = false;
+
+  const timeout = setTimeout(function() {
+
+    finish();
+
+    showResult(
+      "ERROR",
+      "Verification timed out. Please try again.",
+      "error"
+    );
+
+  }, 15000);
+
+
+  function finish() {
+
+    if (completed) {
+      return;
+    }
+
+    completed = true;
+
+    clearTimeout(timeout);
+
+    delete window[callbackName];
+
+    if (script.parentNode) {
+      script.parentNode.removeChild(script);
+    }
+
+    verificationInProgress = false;
+
+    document.getElementById("verifyButton").disabled = false;
+
+  }
+
+
+  window[callbackName] = function(response) {
+
+    finish();
+
+    if (!response || !response.status) {
+
+      showResult(
+        "ERROR",
+        "Invalid response from the SHWR verification API.",
+        "error"
+      );
+
+      return;
+    }
+
+    if (response.status === "WITH SHWR") {
+
+      const details = `
+        <strong>Student Number:</strong>
+        ${escapeHTML(response.studentNumber || studentNumber)}
+        <br>
+
+        <strong>Student Name:</strong>
+        ${escapeHTML(response.studentName || "Not available")}
+        <br>
+
+        <strong>Grade Level:</strong>
+        ${escapeHTML(response.gradeLevel || "Not available")}
+      `;
+
+      showResult(
+        "WITH SHWR",
+        details,
+        "with"
+      );
+
+    } else if (response.status === "NO SHWR") {
+
+      showResult(
+        "NO SHWR",
+        "No SHWR record was found for Student Number: " +
+        escapeHTML(studentNumber),
+        "without"
+      );
+
+    } else {
+
+      showResult(
+        "ERROR",
+        escapeHTML(response.message || "Verification error."),
+        "error"
+      );
+
+    }
+
+  };
+
+
+  const url =
+    API_URL +
+    "?action=verify" +
+    "&studentNumber=" +
+    encodeURIComponent(studentNumber) +
+    "&callback=" +
+    encodeURIComponent(callbackName) +
+    "&_=" +
+    Date.now();
+
+  script.src = url;
+
+  script.onerror = function() {
+
+    finish();
+
+    showResult(
+      "ERROR",
+      "Unable to connect to the SHWR verification API. Check the deployment and access permissions.",
+      "error"
+    );
+
+  };
+
+  document.body.appendChild(script);
+
+}
+
+
+/************************************************************
+ * LOADING DISPLAY
+ ************************************************************/
+
+function showLoading() {
+
+  const result = document.getElementById("result");
+
+  result.className = "result error";
+  result.style.display = "block";
+
+  document.getElementById("statusText").textContent =
+    "VERIFYING...";
+
+  document.getElementById("studentInfo").textContent =
+    "Please wait while the Student Number is checked.";
+
+}
+
+
+/************************************************************
+ * DISPLAY VERIFICATION RESULT
+ ************************************************************/
+
+function showResult(status, message, className) {
+
+  const result = document.getElementById("result");
+
+  result.className = "result " + className;
+  result.style.display = "block";
+
+  document.getElementById("statusText").textContent =
+    status;
+
+  document.getElementById("studentInfo").innerHTML =
+    message;
+
+  result.scrollIntoView({
+    behavior: "smooth",
+    block: "nearest"
+  });
+
+}
+
+
+/************************************************************
+ * HTML ESCAPE
+ ************************************************************/
+
+function escapeHTML(value) {
+
+  return String(value || "").replace(/[&<>"']/g, function(char) {
+
+    const entities = {
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#039;"
+    };
+
+    return entities[char];
+
+  });
+
+}
+
+
+/************************************************************
+ * SCAN NEXT STUDENT
+ ************************************************************/
+
+function scanNext() {
+
+  document.getElementById("result").style.display = "none";
+
+  document.getElementById("studentNumber").value = "";
+
+  document.getElementById("studentNumber").focus();
+
+}
+
+
+/************************************************************
+ * ENTER KEY SUPPORT
+ ************************************************************/
+
+document.getElementById("studentNumber")
+  .addEventListener("keydown", function(event) {
+
+    if (event.key === "Enter") {
+      verifyManual();
+    }
+
+  });
+
+</script>
+
+</body>
+</html>
